@@ -333,7 +333,7 @@ def privacy_AIA(data:list,attr:list,scaler:preprocess.Scaler,hparams:dict,model_
     
 if __name__=='__main__':  
     #set up paths for data loading, result saving, and model checkpointing
-    path = 'C:/Users/jlachterberg/Documents/data'
+    load_path = 'data/generated'
     syn_model = 'dgan'
     result_path = os.path.join('results',syn_model)
     if not os.path.exists(result_path):
@@ -345,13 +345,13 @@ if __name__=='__main__':
     #------------------------------------------------------------------------------------------
     #load data
     cols = ['subject_id','seq_num','icd_code','gender','age','deceased','race']
-    real_df = pd.read_csv(path+'/real.csv.gz',sep=',',compression='gzip',usecols=cols)
-    syn_df = pd.read_csv(path+'/cpar.csv.gz',sep=',',compression='gzip',usecols=cols)
+    real_df = pd.read_csv(load_path+'/real.csv.gz',sep=',',compression='gzip',usecols=cols)
+    syn_df = pd.read_csv(load_path+f'/{syn_model}.csv.gz',sep=',',compression='gzip',usecols=cols)
 
     #select only part of data for quick code testing
-    n = 100
-    real_df = real_df[real_df.subject_id.isin(np.random.choice(real_df.subject_id.unique(),size=n))]
-    syn_df = syn_df[syn_df.subject_id.isin(np.random.choice(syn_df.subject_id.unique(),size=n))]
+    #n = 100
+    #real_df = real_df[real_df.subject_id.isin(np.random.choice(real_df.subject_id.unique(),size=n))]
+    #syn_df = syn_df[syn_df.subject_id.isin(np.random.choice(syn_df.subject_id.unique(),size=n))]
 
     #------------------------------------------------------------------------------------------------------
     #preprocess data to list of static (pandas dataframe) and sequential (padded 3D numpy array) data
@@ -388,80 +388,80 @@ if __name__=='__main__':
         
         #------------------------------------------------------------------------------------------
         #GoF
-        # nn_params = {'EPOCHS':10,
-        #        'BATCH_SIZE':16,
-        #        'HIDDEN_UNITS':[10,10],
-        #        'ACTIVATION':'relu',
-        #        'DROPOUT_RATE':.2
-        #        }
-        # acc,pval,plot = GoF(data=data_,hparams=nn_params,model_path=model_path)
-        # filename = 'gof_test_report.txt'
-        # with open(os.path.join(result_path,filename),'a') as f:
-        #     f.write(f'accuracy at fold {s}: {str(acc)}'+'\n')
-        #     f.write(f'pval at fold {s}: {str(pval)}'+'\n')
-        # #save plot only at even numbers
-        # if (s%2)==0:
-        #     filename = f'gof_plot_{s}.png'
-        #     plot.savefig(os.path.join(result_path,filename))
-        #     plot.clf()
+        nn_params = {'EPOCHS':10,
+               'BATCH_SIZE':16,
+               'HIDDEN_UNITS':[10,10],
+               'ACTIVATION':'relu',
+               'DROPOUT_RATE':.2
+               }
+        acc,pval,plot = GoF(data=data_,hparams=nn_params,model_path=model_path)
+        filename = 'gof_test_report.txt'
+        with open(os.path.join(result_path,filename),'a') as f:
+            f.write(f'accuracy at fold {s}: {str(acc)}'+'\n')
+            f.write(f'pval at fold {s}: {str(pval)}'+'\n')
+        #save plot only at even numbers
+        if (s%2)==0:
+            filename = f'gof_plot_{s}.png'
+            plot.savefig(os.path.join(result_path,filename))
+            plot.clf()
         
         # #------------------------------------------------------------------------------------------
         #mortality 
-        # nn_params = {'EPOCHS':10,
-        #        'BATCH_SIZE':16,
-        #        'HIDDEN_UNITS':[10,10],
-        #        'ACTIVATION':'relu',
-        #        'DROPOUT_RATE':.2
-        #        }
-        # rf_params = {'N_TREES':150,
-        #              'MAX_DEPTH':None}
-        # lr_params = {'L1':.5} 
-        # for pred_model,params in zip(['RNN','RF','LR'],[nn_params,rf_params,lr_params]):
-        #     real_acc,real_auc,syn_acc,syn_auc = mortality_prediction(data=data_,attr=attr,hparams=params,model_path=model_path,pred_model=pred_model)
-        #     filename = 'mortality_pred_accuracy.txt'
-        #     with open(os.path.join(result_path,'mortality_pred_accuracy.txt'),'a') as f:
-        #         f.write(f'Fold: {s} real AUC ({pred_model}): {real_auc}' + '\n')
-        #         f.write(f'Fold: {s} synthetic AUC (RNN): {syn_auc}' + '\n')
+        nn_params = {'EPOCHS':10,
+               'BATCH_SIZE':16,
+               'HIDDEN_UNITS':[10,10],
+               'ACTIVATION':'relu',
+               'DROPOUT_RATE':.2
+               }
+        rf_params = {'N_TREES':150,
+                     'MAX_DEPTH':None}
+        lr_params = {'L1':.5} 
+        for pred_model,params in zip(['RNN','RF','LR'],[nn_params,rf_params,lr_params]):
+            real_acc,real_auc,syn_acc,syn_auc = mortality_prediction(data=data_,attr=attr,hparams=params,model_path=model_path,pred_model=pred_model)
+            filename = 'mortality_pred_accuracy.txt'
+            with open(os.path.join(result_path,'mortality_pred_accuracy.txt'),'a') as f:
+                f.write(f'Fold: {s} real AUC ({pred_model}): {real_auc}' + '\n')
+                f.write(f'Fold: {s} synthetic AUC (RNN): {syn_auc}' + '\n')
 
-        # #------------------------------------------------------------------------------------------
-        # #trajectory prediction
-        # nn_params = {'EPOCHS':10,
-        #     'BATCH_SIZE':16,
-        #     'HIDDEN_UNITS':[10,10],
-        #     'ACTIVATION':'relu',
-        #     'DROPOUT_RATE':.2
-        #     }
-        # real_acc,syn_acc = trajectory_prediction(data=data_,hparams=nn_params,model_path=model_path)
-        # filename = 'trajectory_pred_accuracy.txt'
-        # with open(os.path.join(result_path,filename),'a') as f:
-        #     f.write(f'Real accuracy at fold {s}: {real_acc}'+'\n')
-        #     f.write(f'Synthetic accuracy at fold {s}: {syn_acc}'+'\n')
+        #------------------------------------------------------------------------------------------
+        #trajectory prediction
+        nn_params = {'EPOCHS':10,
+            'BATCH_SIZE':16,
+            'HIDDEN_UNITS':[10,10],
+            'ACTIVATION':'relu',
+            'DROPOUT_RATE':.2
+            }
+        real_acc,syn_acc = trajectory_prediction(data=data_,hparams=nn_params,model_path=model_path)
+        filename = 'trajectory_pred_accuracy.txt'
+        with open(os.path.join(result_path,filename),'a') as f:
+            f.write(f'Real accuracy at fold {s}: {real_acc}'+'\n')
+            f.write(f'Synthetic accuracy at fold {s}: {syn_acc}'+'\n')
 
-        # #------------------------------------------------------------------------------------------
-        # #privacy AIA
-        # nn_params = {'EPOCHS':10,
-        #     'BATCH_SIZE':16,
-        #     'HIDDEN_UNITS':[10,10],
-        #     'ACTIVATION':'relu',
-        #     'DROPOUT_RATE':0.2
-        #     }
-        # sensitive_attr = [['age'],['gender'],['race'],['age','gender'],['age','race'],['gender','race'],['age','gender','race']]
-        # mape_age,mae_age,acc_gender,acc_race = privacy_AIA(data=data_,attr=attr,scaler=scaler,model_path=model_path,hparams=nn_params,sensitive_attr=sensitive_attr)    
-        # filename = 'privacy_AIA.txt'
-        # with open(os.path.join(result_path,filename),'a') as f:
-        #     age_j = 0
-        #     gender_j = 0
-        #     race_j = 0
-        #     for labels in sensitive_attr:
-        #         f.write(f'We are at fold {s}'+'\n')
-        #         f.write(f'Labels are {labels}'+'\n')
-        #         if 'age' in labels:
-        #             f.write(f'Age MAPE: {mape_age[age_j]}'+'\n')
-        #             f.write(f'Age MAE: {mae_age[age_j]}'+'\n')
-        #             age_j+=1
-        #         if 'gender' in labels:
-        #             f.write(f'Gender accuracy: {acc_gender[gender_j]}'+'\n')
-        #             gender_j+=1
-        #         if sum(x.count('race') for x in labels)>0:
-        #             f.write(f'Race accuracy: {acc_race[race_j]}'+'\n')
-        #             race_j+=1
+        #------------------------------------------------------------------------------------------
+        #privacy AIA
+        nn_params = {'EPOCHS':10,
+            'BATCH_SIZE':16,
+            'HIDDEN_UNITS':[10,10],
+            'ACTIVATION':'relu',
+            'DROPOUT_RATE':0.2
+            }
+        sensitive_attr = [['age'],['gender'],['race'],['age','gender'],['age','race'],['gender','race'],['age','gender','race']]
+        mape_age,mae_age,acc_gender,acc_race = privacy_AIA(data=data_,attr=attr,scaler=scaler,model_path=model_path,hparams=nn_params,sensitive_attr=sensitive_attr)    
+        filename = 'privacy_AIA.txt'
+        with open(os.path.join(result_path,filename),'a') as f:
+            age_j = 0
+            gender_j = 0
+            race_j = 0
+            for labels in sensitive_attr:
+                f.write(f'We are at fold {s}'+'\n')
+                f.write(f'Labels are {labels}'+'\n')
+                if 'age' in labels:
+                    f.write(f'Age MAPE: {mape_age[age_j]}'+'\n')
+                    f.write(f'Age MAE: {mae_age[age_j]}'+'\n')
+                    age_j+=1
+                if 'gender' in labels:
+                    f.write(f'Gender accuracy: {acc_gender[gender_j]}'+'\n')
+                    gender_j+=1
+                if sum(x.count('race') for x in labels)>0:
+                    f.write(f'Race accuracy: {acc_race[race_j]}'+'\n')
+                    race_j+=1

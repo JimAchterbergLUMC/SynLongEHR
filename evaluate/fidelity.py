@@ -114,8 +114,7 @@ if __name__ == '__main__':
     if not os.path.exists(result_path):
         os.makedirs(result_path)
     #load real and synthetic data
-    #load_path = 'data'
-    load_path = 'C:/Users/jlachterberg/Documents/data'
+    load_path = 'data/generated'
     real_file = os.path.join(load_path,'real.csv.gz')
     syn_file = os.path.join(load_path,f'{syn_model}.csv.gz')
     cols = ['subject_id','seq_num','icd_code','gender','age','deceased','race']
