@@ -1,20 +1,28 @@
 import os
+from sdv.sequential import PARSynthesizer
+import generate.utils.preprocess as preprocess
 from gretel_synthetics.timeseries_dgan.dgan import DGAN
 from gretel_synthetics.timeseries_dgan.config import DGANConfig
-import preprocess
 import pickle
 
+def train_cpar(df,model_dir,epochs=10,sample_size=1,cuda=False):
+    model_path = os.path.join(model_dir,f'cpar.pkl')
+    df = preprocess.preprocess_cpar(df)
+    metadata = preprocess.get_metadata(df)
+    context_columns = ['age','gender','deceased','race']
+    model = PARSynthesizer(metadata=metadata,context_columns=context_columns,
+                           epochs=epochs,sample_size=sample_size,
+                           cuda=cuda,verbose=True,
+                           enforce_min_max_values=True,enforce_rounding=False,
+                           locales=None,segment_size=None)
+    model.fit(df)
+    model.save(model_path)
 
-def train_dgan(df,epochs=10,batch_size=32,sample_len=5,cuda=False):
+def train_dgan(df,model_dir,epochs=10,batch_size=32,sample_len=5,cuda=False):
     # #IF USING WINDOWS AS OS:
     # #dont forget to turn off multiprocessing in the torch DataLoader in dgan.py (line 652)
     # this is done by setting num_workers=0, and removing subsequent multiprocessing arguments
-    # #this is giving bugs on Windows, as "fork" multiprocessing is not available on Windows.
-    # #might have to make a bug report of this, since this is not configurable in the package and breaks the package for Windows users...
-    
-    model_dir = 'model/'
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
+    # #this is giving bugs on Windows, as "fork" multiprocessing is not available on Windows, but is hardcoded in the package...
     weight_path = os.path.join(model_dir,f'dgan_weights.pt')
     model_path = os.path.join(model_dir,f'dgan_model.pkl')
     if os.path.exists(weight_path):
@@ -40,19 +48,8 @@ def train_dgan(df,epochs=10,batch_size=32,sample_len=5,cuda=False):
     #save weights
     model.save(weight_path)
 
-
-#executes training job for specified model and model version
 if __name__=='__main__':
-    #CHANGE WHEN RUNNING SCRIPT!!!
-    #also dont forget to change nnet architecture if necessary
-    path = 'C:/Users/Jim/Documents/thesis_paper/data'
-    params={'EPOCHS':512, 
-            'BATCH_SIZE':8, 
-            'SAMPLE_LEN':5,
-            'CUDA':False}
-
-    #loading raw data
-    load_path = path + '/raw' + '/hosp'
+    load_path = 'data'
     patient_file = 'patients.csv.gz'
     diagnoses_file = 'diagnoses_icd.csv.gz'
     admissions_file = 'admissions.csv.gz'
@@ -60,13 +57,16 @@ if __name__=='__main__':
                                                     admissions_file,nrows=None)
     
     #preprocess and export data
-    save_path = path + '/processed' + '/generated' + '/real' 
+    save_path = os.path.join(load_path,'generated')
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     file = 'real.csv.gz'
     df = preprocess.preprocess(patients,diagnoses)
     df.to_csv(os.path.join(save_path,file),sep=',',compression='gzip')
-    
-    #perform training job
-    train_dgan(df=df,epochs=params['EPOCHS'],batch_size=params['BATCH_SIZE'],
-               sample_len=params['SAMPLE_LEN'],cuda=params['CUDA'])
+         
+    #perform training job and save model to directory
+    model_dir = 'syn_model/'
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    train_cpar(df=df,model_dir=model_dir,epochs=10,sample_size=1,cuda=False)
+    train_dgan(df=df,model_dir=model_dir,epochs=10,batch_size=8,sample_len=5,cuda=False)

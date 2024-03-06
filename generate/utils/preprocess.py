@@ -58,7 +58,7 @@ def preprocess(patients,diagnoses):
     patients = patients.rename({'dod':'deceased','anchor_age':'age'},axis=1)   
     #load mapping table and map diagnostics codes to corresponding categories
     #note it does not include congenital anomalies(Cong), perinatal diseases (Perin), pregnancy disease (Preg)
-    map = pd.read_csv('icd_mapping.csv',sep=',')
+    map = pd.read_csv('generate/utils/icd_mapping.csv',sep=',')
     def map_to_category(row):
         category = map.description_short[(row.icd_code>=map.start_section)&(row.icd_code<=map.end_section)]
         return category.values[0] if not category.empty else None
@@ -183,3 +183,17 @@ def postprocess_cpar(df):
     df = df.sort_values(['subject_id','seq_num'])
     df.seq_num = df.groupby('subject_id').cumcount()+1
     return df
+
+#randomly perturbes label with level% probability
+def rd_perturbation(column,level):
+    perturbed_labels = column.copy()
+    mask = np.random.rand(len(column)) < level  
+    unique_labels = column.unique()
+    for idx, label in enumerate(perturbed_labels):
+        if mask[idx]:
+            perturbed_labels[idx] = np.random.choice(np.setdiff1d(unique_labels, [label]))
+    return perturbed_labels
+
+#adds random gaussian noise of level% of the real std
+def rd_noise(column,level):
+    return column + np.random.normal(loc=0,scale=level*np.std(column),size=len(column))

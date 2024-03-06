@@ -1,2 +1,5 @@
-data/*
+data/
 !data/.placeholder
+syn_model/
+results/
+model/
