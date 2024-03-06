@@ -1,0 +1,15 @@
+icd_chapter,description,description_short,start_section,end_section
+0,Infectious And Parasitic Diseases,InfPar,1,139
+1,Neoplasms,Neopl,140,239
+2,Endocrine Nutritional And Metabolic Diseases And Immunity Disorders,EndImm,240,279
+3,Diseases Of The Blood And Blood-Forming Organs,Blood,280,289
+4,Mental Behavioral And Neurodevelopmental Disorders,MenNeur,290,319
+5,Diseases Of The Nervous System And Sense Organs,NervSen,320,389
+6,Diseases Of The Circulatory System,Circ,390,459
+7,Diseases Of The Respiratory System,Resp,460,519
+8,Diseases Of The Digestive System,Dig,520,579
+9,Diseases Of The Genitourinary System,Geni,580,629
+11,Diseases Of The Skin And Subcutaneous Tissue,Skin,680,709
+12,Diseases Of The Musculoskeletal System And Connective Tissue,Musc,710,739
+15,Symptoms Signs And Ill-Defined Conditions,Sympt,780,799
+16,Injury And Poisoning,InjPoi,800,999
