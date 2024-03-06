@@ -4,14 +4,14 @@ import generate.utils.preprocess as preprocess
 import pandas as pd
 
 def generate_cpar(n_samples,version):
-    load_path = os.path.join('model',f'cpar.pkl')
+    load_path = os.path.join('syn_model',f'cpar.pkl')
     model = pickle.load(open(load_path,'rb'))
     samples = model.sample(num_sequences=n_samples,sequence_length=None)
     return samples
 
 def generate_dgan(n_samples):
-    model_path = os.path.join('model',f'dgan_model.pkl')
-    weight_path = os.path.join('model',f'dgan_weights.pt')
+    model_path = os.path.join('syn_model',f'dgan_model.pkl')
+    weight_path = os.path.join('syn_model',f'dgan_weights.pt')
     #load instantiated model and input saved weights
     with open(model_path,'rb') as f:
         model = pickle.load(f)
