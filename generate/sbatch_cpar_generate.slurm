@@ -10,6 +10,7 @@
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu:1
 #SBATCH -t 23:59:00
+#
 
 # existing module cleanup
 module purge > /dev/null 2>&1
