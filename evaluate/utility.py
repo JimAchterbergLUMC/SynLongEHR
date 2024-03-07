@@ -57,7 +57,7 @@ def GoF(data: list, hparams: dict, model_path: str):
         "dropout_rate": hparams["DROPOUT_RATE"],
         "activation": hparams["ACTIVATION"],
     }
-    model = models.test_gof(config=config)
+    model = models.GoF_RNN(config=config)
     model.compile(optimizer="Adam", loss="binary_crossentropy", metrics="accuracy")
     model.fit(
         X_train,
@@ -136,7 +136,7 @@ def mortality_prediction(
                 "dropout_rate": hparams["DROPOUT_RATE"],
                 "activation": hparams["ACTIVATION"],
             }
-            model = models.test_mortality(config=config)
+            model = models.mortality_RNN(config=config)
             # model = models.mortality_RNN_simple(config=config)
             auc = keras.metrics.AUC(name="auc")
             model.compile(optimizer="Adam", loss="binary_crossentropy", metrics=auc)
@@ -415,7 +415,7 @@ def privacy_AIA(
 if __name__ == "__main__":
     # set up paths for data loading, result saving, and model checkpointing
     load_path = "data/generated"
-    syn_model = "dgan"
+    syn_model = "cpar"
     result_path = os.path.join("results", syn_model)
     if not os.path.exists(result_path):
         os.makedirs(result_path)
@@ -434,9 +434,13 @@ if __name__ == "__main__":
     )
 
     # select only part of data for quick code testing
-    # n = 100
-    # real_df = real_df[real_df.subject_id.isin(np.random.choice(real_df.subject_id.unique(),size=n))]
-    # syn_df = syn_df[syn_df.subject_id.isin(np.random.choice(syn_df.subject_id.unique(),size=n))]
+    # n = 60
+    # real_df = real_df[
+    #     real_df.subject_id.isin(np.random.choice(real_df.subject_id.unique(), size=n))
+    # ]
+    # syn_df = syn_df[
+    #     syn_df.subject_id.isin(np.random.choice(syn_df.subject_id.unique(), size=n))
+    # ]
 
     # ------------------------------------------------------------------------------------------------------
     # preprocess data to list of static (pandas dataframe) and sequential (padded 3D numpy array) data

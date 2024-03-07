@@ -1,6 +1,6 @@
 import os
 from sdv.sequential import PARSynthesizer
-import generate.utils.preprocess as preprocess
+import utils.preprocess as preprocess
 from gretel_synthetics.timeseries_dgan.dgan import DGAN
 from gretel_synthetics.timeseries_dgan.config import DGANConfig
 import pickle
@@ -121,6 +121,6 @@ if __name__ == "__main__":
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     train_cpar(df=df, model_dir=model_dir, epochs=10, sample_size=1, cuda=False)
-    train_dgan(
-        df=df, model_dir=model_dir, epochs=10, batch_size=8, sample_len=5, cuda=False
-    )
+    # train_dgan(
+    #    df=df, model_dir=model_dir, epochs=10, batch_size=8, sample_len=5, cuda=False
+    # )

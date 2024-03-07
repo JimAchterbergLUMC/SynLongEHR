@@ -135,8 +135,12 @@ if __name__ == "__main__":
 
     # select only k subjects to test code quickly
     # k = 60
-    # syn_df = syn_df[syn_df.subject_id.isin(np.random.choice(syn_df.subject_id.unique(),k))]
-    # real_df = real_df[real_df.subject_id.isin(np.random.choice(real_df.subject_id.unique(),k))]
+    # syn_df = syn_df[
+    #     syn_df.subject_id.isin(np.random.choice(syn_df.subject_id.unique(), k))
+    # ]
+    # real_df = real_df[
+    #     real_df.subject_id.isin(np.random.choice(real_df.subject_id.unique(), k))
+    # ]
 
     descriptive_statistics(real_df, syn_df, result_path)
 

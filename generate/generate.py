@@ -1,6 +1,6 @@
 import os
 import pickle
-import generate.utils.preprocess as preprocess
+import utils.preprocess as preprocess
 import pandas as pd
 
 
@@ -64,8 +64,8 @@ def generate_noise(
 
 
 if __name__ == "__main__":
-    n_samples = 18245
-    syn_model = "dgan"  # change to 'cpar' or 'noise' if required
+    n_samples = 100
+    syn_model = "cpar"  # change to 'cpar' or 'noise' if required
     assert syn_model in ["dgan", "cpar", "noise"]
 
     if syn_model == "dgan":

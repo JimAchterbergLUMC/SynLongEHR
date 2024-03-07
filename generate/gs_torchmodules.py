@@ -2,6 +2,8 @@
 # includes masking in the discriminator to allow variable sequence lengths
 # DONT FORGET TO IMPLEMENT MASKING PARAMETERS IN THE DGAN.PY SCRIPT
 
+import torch
+
 
 class Discriminator(torch.nn.Module):
     """Discriminator network for DGAN model."""
