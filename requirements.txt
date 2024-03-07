@@ -1,0 +1,7 @@
+torch==1.13.1
+gretel-synthetics==0.20.0
+sdv==1.7.0
+tensorflow==2.8.0
+dtwParallel<=0.9.40
+scikit-learn==1.4.0
+protobuf==3.20.0
