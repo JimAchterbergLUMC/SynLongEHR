@@ -2,10 +2,18 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 
-
-
 #numerically encode categoricals, one hot if necessary, separate static and sequential data
-def preprocess_(real_df,syn_df):
+def preprocess_(real_df:pd.DataFrame,syn_df:pd.DataFrame):
+        """
+        Preprocesses synthetic and real data for usage in evaluation ML models.
+
+        real_df: real dataframe
+        syn_df: synthetic dataframe
+        returns: real and synthetic data, consisting of pandas dataframe of static data and
+            3D numpy array of dynamic data.
+        
+        """
+
         n_real = real_df.subject_id.nunique()
         #pool samples for encoding
         df = pd.concat([real_df,syn_df],axis=0)
@@ -126,7 +134,15 @@ def train_split(X,y,stratify=None,train_size=.7):
 
 
 
-def trajectory_input_output(x,max_t):
+def trajectory_input_output(x:list,max_t:int):
+    """
+    Get input-target pairs for next-step diagnoses prediction.
+
+    x: data in the form of numpy arrays (list of static and sequential)
+    max_t: maximum amount of timesteps (to pad to)
+    returns: input output pairs
+    """
+
     static = x[0]
     seq = x[1]
     timesteps = np.max(np.where(np.any(seq!=0,axis=2),np.arange(seq.shape[1]),-1),axis=1)

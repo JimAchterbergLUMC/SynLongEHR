@@ -54,12 +54,13 @@ class Discriminator(torch.nn.Module):
 
 
 class MaskingLayer(torch.nn.Module):
+    """Masking layer to model mixed length sequences"""
     def __init__(self, mask_value: int = 1 , discriminator: bool = True,
                  max_seq_len: int = 40 , total_attributes: int = 12):
         super().__init__()
-        self.mask_value = mask_value                #indicates end of sequence
-        self.max_seq_len = max_seq_len              #needed for mask computation
-        self.total_attributes = total_attributes    #needed for mask computation
+        self.mask_value = mask_value                
+        self.max_seq_len = max_seq_len              
+        self.total_attributes = total_attributes    
 
     def forward(self, input):
        

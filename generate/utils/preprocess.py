@@ -5,11 +5,18 @@ from sdv.metadata import SingleTableMetadata
 from gretel_synthetics.timeseries_dgan.config import OutputType
 
 
-def load_mimic_data(load_path,patient_file,diagnoses_file,admissions_file,nrows=None):
+def load_mimic_data(load_path,nrows=None):
+    """
+    Loads MIMIC-IV data. Required tables are patients, admissions, and diagnoses_icd. 
+
+    load_path: data path
+    nrows: number of rows to load (for code testing only)
+    returns: patient and diagnoses table
+    """
     #loads compressed mimic file, while only selecting columns and rows of interest
-    patient_file = os.path.join(load_path,patient_file)
-    diagnoses_file = os.path.join(load_path,diagnoses_file)
-    admissions_file = os.path.join(load_path,admissions_file)
+    patient_file = os.path.join(load_path,'patients.csv.gz')
+    diagnoses_file = os.path.join(load_path,'diagnoses_icd.csv.gz')
+    admissions_file = os.path.join(load_path,'admissions.csv.gz')
     #setting filepaths and columns of interest
     diagnoses_cols = ['subject_id','hadm_id','seq_num','icd_code']
     patient_cols = ['subject_id','gender','anchor_age','dod']
@@ -25,12 +32,16 @@ def load_mimic_data(load_path,patient_file,diagnoses_file,admissions_file,nrows=
     patients = patients.merge(adm,on='subject_id',how='left')
     return patients,diagnoses
 
-    
-#----------------------------------------------------------------------------------------------------------------------
-#MIMIC-IV preprocessing
 
 
-def preprocess(patients,diagnoses):
+def preprocess(patients:pd.DataFrame,diagnoses:pd.DataFrame):
+    """
+    Preprocesses patients and diagnoses dataframes to single longitudinal EHR dataframe.
+
+    patients: patient dataframe
+    diagnoses: diagnoses dataframe
+    returns: single longitudinal dataframe
+    """
     #ensure we are not working on view of dataframe
     patients = patients.copy()
     diagnoses = diagnoses.copy()
@@ -96,7 +107,20 @@ def preprocess(patients,diagnoses):
     return df
 
 
-def get_metadata(df,numerical_cols=[],categorical_cols=[],prim_key='primary_key',subject_key='subject_id',sequence_key='seq_num'):
+def get_metadata(df:pd.DataFrame,numerical_cols:list=[],categorical_cols:list=[],prim_key:str='primary_key',
+                 subject_key:str='subject_id',sequence_key:str='seq_num'):
+    """
+    Gets metadata for CPAR model. Can detect datatypes automatically, or be set manually.
+
+    df: longitudinal EHR pandas dataframe
+    numerical_cols: list of numerical features
+    categorical_cols: list of categorical features
+    prim_key: primary key column (distinct for each row)
+    subject_key: distinct key per subject
+    sequence_key: distinct key per sequence step
+    returns: CPAR metadata object
+    """
+
     #create metadata object necessary in SDV PAR model
     metadata = SingleTableMetadata()
     metadata.detect_from_dataframe(data=df)
@@ -116,13 +140,24 @@ def get_metadata(df,numerical_cols=[],categorical_cols=[],prim_key='primary_key'
     return metadata
 
 
-#pads a longitudinal pandas dataframe
-def pad_df(group,static_cols,dynamic_cols,pad_to,pad_with=0,timestep_idx='seq_num'):
+
+def pad_df(group,static_cols,dynamic_cols,pad_to,pad_with=0,step_idx='seq_num'):
+        """
+        Pads a longitudinal dataframe so each subject has same amount of timesteps.
+
+        group: subject to apply padding to.
+        static_cols: features which do not change over sequence steps.
+        dynamic_cols: features which change over sequence steps.
+        pad_to: amount of sequence steps to pad the subject to.
+        pad_with: value with which to pad.
+        step_idx: index denoting current sequence step.
+        returns: padded data for a subject
+        """
         #find the missing timesteps
-        existing_timesteps = group[timestep_idx].unique()
+        existing_timesteps = group[step_idx].unique()
         missing_timesteps = list(set(range(1,pad_to+1))-set(existing_timesteps))
         if missing_timesteps:
-            missing_rows = pd.DataFrame({timestep_idx: missing_timesteps})
+            missing_rows = pd.DataFrame({step_idx: missing_timesteps})
             for col in group.columns:
                 #pad with number if numeric or zero string if non numeric
                 
@@ -133,17 +168,25 @@ def pad_df(group,static_cols,dynamic_cols,pad_to,pad_with=0,timestep_idx='seq_nu
                     missing_rows[col] = pad_with
             #concatenate rows to current subject
             group = pd.concat([group, missing_rows], ignore_index=True, sort=False)
-        return group.sort_values(timestep_idx)
+        return group.sort_values(step_idx)
 
-def preprocess_dgan(df,subject_idx='subject_id',timestep_idx='seq_num'):
-        max_t = df[timestep_idx].max()
+def preprocess_dgan(df:pd.DataFrame,subject_idx:str='subject_id',step_idx:str='seq_num'):
+        """
+        Preprocessing specific to DGAN model.
+
+        df: real data
+        subject_idx: subject index
+        step_idx: sequence step index
+        returns: preprocessed data ready for DGAN training
+        """
+        max_t = df[step_idx].max()
         max_t = int(np.ceil(max_t/5)*5)
         #add a fake continuous dynamic column (DGAN package issue)
         df['throwaway'] = 0
         #add a binary column, where a 1 indicates it is the final timestep 
         #all timesteps AFTER this first 1 are masked in the discriminator
         df['final_flag'] = 0
-        df.loc[df.groupby(subject_idx)[timestep_idx].idxmax(), 'final_flag'] = 1
+        df.loc[df.groupby(subject_idx)[step_idx].idxmax(), 'final_flag'] = 1
         #pad dynamic features 
         #we pad to a multiple of 5 in this use case to output batches of 5 timesteps
         df = df.groupby('subject_id').apply(pad_df,static_cols=['subject_id','age','gender','deceased','race'],
@@ -152,14 +195,27 @@ def preprocess_dgan(df,subject_idx='subject_id',timestep_idx='seq_num'):
         df[subject_idx] = pd.factorize(df[subject_idx])[0]
         return df
 
-def preprocess_cpar(df,subject_idx='subject_id',timestep_idx='seq_num'):
-    #create a primary key column, which is distinct for each row, and add to dataframe
-    # -> combination of subject_id and seq_num, since we only use first hospital admission
-    prim_key = pd.DataFrame(df[subject_idx].astype(str) + '_' + df[timestep_idx].astype(str),columns=['primary_key'])
+def preprocess_cpar(df:pd.DataFrame,subject_idx:str='subject_id',step_idx:str='seq_num'):
+    """
+    Preprocessing specific to CPAR model.
+
+    df: real data
+    subject_idx: subject index
+    step_idx: sequence step index
+    returns: preprocessed data ready for CPAR training
+    """
+    prim_key = pd.DataFrame(df[subject_idx].astype(str) + '_' + df[step_idx].astype(str),columns=['primary_key'])
     df = pd.concat((prim_key,df),axis=1)
     return df
 
-def postprocess_dgan(df):
+def postprocess_dgan(df:pd.DataFrame):
+    """
+    Postprocesses synthetic data generated by DGAN, for homogenous evaluation downstream.
+
+    df: generated data by DGAN
+    returns: cleaned synthetic dataframe from DGAN
+    """
+
     df = df.sort_values(['subject_id','seq_num'])
     #remove padding (so infer real amount of timesteps)
     #check first prediction of end flag
@@ -175,7 +231,13 @@ def postprocess_dgan(df):
     df.age = df.age.round()
     return df
 
-def postprocess_cpar(df):
+def postprocess_cpar(df:pd.DataFrame):
+    """
+    Postprocesses synthetic data generated by CPAR, for homogenous evaluation downstream.
+
+    df: generated data by CPAR
+    returns: cleaned synthetic dataframe from CPAR
+    """
     df = df.sort_values(['subject_id','seq_num'])
     #remove primary key
     df = df.drop('primary_key',axis=1)

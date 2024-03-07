@@ -4,9 +4,21 @@ import generate.utils.preprocess as preprocess
 from gretel_synthetics.timeseries_dgan.dgan import DGAN
 from gretel_synthetics.timeseries_dgan.config import DGANConfig
 import pickle
+import pandas as pd
 
-def train_cpar(df,model_dir,epochs=10,sample_size=1,cuda=False):
-    model_path = os.path.join(model_dir,f'cpar.pkl')
+def train_cpar(df:pd.DataFrame,model_dir:str,epochs:int=10,sample_size:int=1,cuda:bool=False):
+    """
+    Trains CPAR to generate synthetic data and saves trained model to directory. Samples are generated 
+    from trained model through generate.py script.
+
+    df: pandas dataframe of real data 
+    model_dir: directory to save the trained model
+    epochs: amount of epochs to train the model for
+    sample_size: Amount of times to sample at each sequence step to maximize likelihood
+    cuda: whether to use cuda GPU
+    returns: None, saves trained model to directory
+    """
+    model_path = os.path.join(model_dir,'cpar.pkl')
     df = preprocess.preprocess_cpar(df)
     metadata = preprocess.get_metadata(df)
     context_columns = ['age','gender','deceased','race']
@@ -18,13 +30,27 @@ def train_cpar(df,model_dir,epochs=10,sample_size=1,cuda=False):
     model.fit(df)
     model.save(model_path)
 
-def train_dgan(df,model_dir,epochs=10,batch_size=32,sample_len=5,cuda=False):
-    # #IF USING WINDOWS AS OS:
-    # #dont forget to turn off multiprocessing in the torch DataLoader in dgan.py (line 652)
-    # this is done by setting num_workers=0, and removing subsequent multiprocessing arguments
-    # #this is giving bugs on Windows, as "fork" multiprocessing is not available on Windows, but is hardcoded in the package...
-    weight_path = os.path.join(model_dir,f'dgan_weights.pt')
-    model_path = os.path.join(model_dir,f'dgan_model.pkl')
+def train_dgan(df:pd.DataFrame,model_dir:str,epochs:int=10,batch_size:int=32,sample_len:int=5,cuda:bool=False):
+    """
+    Trains DGAN to generate synthetic data and saves trained model to directory. Samples are generated 
+    from trained model through generate.py script.
+    IF USING WINDOWS AS OS:
+    dont forget to turn off multiprocessing in the torch DataLoader in dgan.py (line 652)
+    this is done by setting num_workers=0, and removing subsequent multiprocessing arguments
+    this is giving bugs on Windows, as "fork" multiprocessing is not available on Windows, but is hardcoded in the package...
+
+    df: pandas dataframe of real data 
+    model_dir: directory to save the trained model
+    epochs: amount of epochs to train the model for
+    batch_size: size of batches during training
+    sample_len: amount of sequence steps to sample at a time
+    cuda: whether to use cuda GPU
+    returns: None, saves trained model to directory
+    """
+
+    
+    weight_path = os.path.join(model_dir,'dgan_weights.pt')
+    model_path = os.path.join(model_dir,'dgan_model.pkl')
     if os.path.exists(weight_path):
         raise Exception(f'there already exists a trained model, terminating...')
     
@@ -50,11 +76,7 @@ def train_dgan(df,model_dir,epochs=10,batch_size=32,sample_len=5,cuda=False):
 
 if __name__=='__main__':
     load_path = 'data'
-    patient_file = 'patients.csv.gz'
-    diagnoses_file = 'diagnoses_icd.csv.gz'
-    admissions_file = 'admissions.csv.gz'
-    patients,diagnoses = preprocess.load_mimic_data(load_path,patient_file,diagnoses_file,
-                                                    admissions_file,nrows=None)
+    patients,diagnoses = preprocess.load_mimic_data(load_path,nrows=None)
     
     #preprocess and export data
     save_path = os.path.join(load_path,'generated')
