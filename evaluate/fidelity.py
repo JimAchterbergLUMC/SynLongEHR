@@ -105,7 +105,7 @@ def tsne_plot(real_df: pd.DataFrame, syn_df: pd.DataFrame, result_path: str):
     distance_matrix = ((len(static.columns)) / len(df.columns)) * static_distances + (
         seq.shape[2] / len(df.columns)
     ) * dynamic_distances
-    filename = "distance_matrix.csv"
+    filename = "distance_matrix.pkl"
     with open(os.path.join(result_path, filename), "wb") as f:
         pickle.dump(distance_matrix, f)
 
