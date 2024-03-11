@@ -7,56 +7,154 @@ import numpy as np
 import os
 from utils import preprocess, metrics, models
 import pickle
+from matplotlib import pyplot as plt
 
 
-def descriptive_statistics(
-    real_df: pd.DataFrame, syn_df: pd.DataFrame, result_path: str
-):
+def stats_plot(real_df, cpar_df, dgan_df):
+    barWidth = 0.25
+    stats_real, stats_cpar = descriptive_statistics(real_df, cpar_df)
+    stats_real, stats_dgan = descriptive_statistics(real_df, dgan_df)
+    # boxplots
+    plt.figure(figsize=(15, 4))
+    box = plt.boxplot(
+        real_df.age / 100, positions=[0], patch_artist=True, showfliers=False
+    )
+    box["boxes"][0].set_facecolor("blue")
+    box = plt.boxplot(
+        cpar_df.age / 100, positions=[0 + barWidth], patch_artist=True, showfliers=False
+    )
+    box["boxes"][0].set_facecolor("lightcoral")
+    box = plt.boxplot(
+        dgan_df.age / 100,
+        positions=[0 + 2 * barWidth],
+        patch_artist=True,
+        showfliers=False,
+    )
+    box["boxes"][0].set_facecolor("maroon")
+
+    # barplots
+    plt.bar(
+        np.arange(start=1, stop=len(stats_cpar)),
+        stats_real[1:],
+        color="blue",
+        label="Real",
+        width=barWidth,
+    )
+    plt.bar(
+        np.arange(start=1, stop=len(stats_cpar)) + barWidth,
+        stats_cpar[1:],
+        color="lightcoral",
+        label="CPAR",
+        width=barWidth,
+    )
+    plt.bar(
+        np.arange(start=1, stop=len(stats_cpar)) + 2 * barWidth,
+        stats_dgan[1:],
+        color="maroon",
+        label="DGAN",
+        width=barWidth,
+    )
+
+    plt.legend(fontsize=11)
+    vars = [
+        "Age \n /100",
+        "Deceased: \n Yes",
+        "Gender: \n Male",
+        "Race: \n White",
+        "Race: \n Unknown",
+        "Race: \n Black",
+        "Race: \n Hispanic",
+        "Race: \n Asian",
+        "Race: \n Native American",
+        "Race: \n Multiple",
+    ]
+    plt.xticks(np.arange(len(vars)), vars, fontsize=11)
+    plt.yticks(fontsize=11)
+    return plt
+
+
+def descriptive_statistics(real_df: pd.DataFrame, syn_df: pd.DataFrame):
     """
-    Outputs descriptive statistics. Tables for static, heatmaps for dynamic data.
+    Creates a list of some basic descriptive statistics, to later be plotted in a Bar plot.
 
-    real_df: Real longitudinal pandas dataframe.
-    syn_df: Synthetic longitudinal pandas dataframe.
-    result_path: Path to which we save results.
-    returns: None, saves results to result directory.
+    real_df: real dataframe
+    syn_df: synthetic dataframe
+    returns: list of descriptive statistics
     """
 
-    static_features = ["age", "gender", "deceased", "race"]
-    # get static feature dataframes
-    real_df_static = preprocess.get_static(data=real_df, columns=static_features)
-    syn_df_static = preprocess.get_static(data=syn_df, columns=static_features)
+    # first get static data
+    stat = ["age", "gender", "deceased", "race"]
+    real_df = preprocess.get_static(data=real_df, columns=stat)
+    syn_df = preprocess.get_static(data=syn_df, columns=stat)
 
-    # get descriptive statistics for static numerical variables
-    real_stats = metrics.descr_stats(data=real_df_static[["age"]])
-    syn_stats = metrics.descr_stats(data=syn_df_static[["age"]])
-    filename = "descr_stats_staticnumerical.csv"
-    pd.concat([real_stats, syn_stats], axis=1).to_csv(
-        os.path.join(result_path, filename)
-    )
+    stats_real = []
+    stats_syn = []
+    for df, results in zip([real_df, syn_df], [stats_real, stats_syn]):
+        results.append(df.age.mean() / 100)
+        results.append(df.deceased.mean())
+        results.append(len(df[df.gender == "M"]) / len(df))
+        for race in [
+            "white",
+            "unknown",
+            "black",
+            "hispanic",
+            "asian",
+            "native_american",
+            "multiple",
+        ]:
+            results.append(len(df[df.race == race]) / len(df))
+    return stats_real, stats_syn
 
-    # #get relative frequencies for static categorical variables
-    real_rel_freq = metrics.relative_freq(
-        data=real_df_static[["gender", "deceased", "race"]]
-    )
-    syn_rel_freq = metrics.relative_freq(
-        data=syn_df_static[["gender", "deceased", "race"]]
-    )
-    filename = "descr_stats_staticcategorical.csv"
-    pd.concat([real_rel_freq, syn_rel_freq], axis=1).to_csv(
-        os.path.join(result_path, filename)
-    )
 
-    # get matrix of relative frequencies at each step
-    real_freqmatrix = metrics.rel_freq_matrix(data=real_df, columns="icd_code")
-    syn_freqmatrix = metrics.rel_freq_matrix(data=syn_df, columns="icd_code")
+# def descriptive_statistics(
+#     real_df: pd.DataFrame, syn_df: pd.DataFrame, result_path: str
+# ):
+#     """
+#     Outputs descriptive statistics. Tables for static, heatmaps for dynamic data.
 
-    # plot frequencies as a heatmap
-    for matrix, name in zip([real_freqmatrix, syn_freqmatrix], ["Real", "Synthetic"]):
-        plot = metrics.freq_matrix_plot(matrix, range=(0, 0.8))
-        plot.title(f"{name} ICD chapter frequencies")
-        filename = f"{name}_matrixplot.png"
-        plot.savefig(os.path.join(result_path, filename))
-        plot.show()
+#     real_df: Real longitudinal pandas dataframe.
+#     syn_df: Synthetic longitudinal pandas dataframe.
+#     result_path: Path to which we save results.
+#     returns: None, saves results to result directory.
+#     """
+
+#     static_features = ["age", "gender", "deceased", "race"]
+#     # get static feature dataframes
+#     real_df_static = preprocess.get_static(data=real_df, columns=static_features)
+#     syn_df_static = preprocess.get_static(data=syn_df, columns=static_features)
+
+#     # get descriptive statistics for static numerical variables
+#     stat_num_real = metrics.descr_stats(data=real_df_static[["age"]])
+#     stat_num_syn = metrics.descr_stats(data=syn_df_static[["age"]])
+#     # filename = "descr_stats_staticnumerical.csv"
+#     # pd.concat([stat_num_real, stat_num_syn], axis=1).to_csv(
+#     #     os.path.join(result_path, filename)
+#     # )
+
+#     # #get relative frequencies for static categorical variables
+#     rel_freq_real = metrics.relative_freq(
+#         data=real_df_static[["gender", "deceased", "race"]]
+#     )
+#     rel_freq_syn = metrics.relative_freq(
+#         data=syn_df_static[["gender", "deceased", "race"]]
+#     )
+#     # filename = "descr_stats_staticcategorical.csv"
+#     # pd.concat([rel_freq_real, rel_freq_syn], axis=1).to_csv(
+#     #     os.path.join(result_path, filename)
+#     # )
+
+#     # get matrix of relative frequencies at each step
+#     # freqmatrix_real = metrics.rel_freq_matrix(data=real_df, columns="icd_code")
+#     # freqmatrix_syn = metrics.rel_freq_matrix(data=syn_df, columns="icd_code")
+
+#     # # plot frequencies as a heatmap
+#     # for matrix, name in zip([freqmatrix_real, freqmatrix_syn], ["Real", "Synthetic"]):
+#     #     plot = metrics.freq_matrix_plot(matrix, range=(0, 0.8))
+#     #     plot.title(f"{name} ICD chapter frequencies")
+#     #     filename = f"{name}_matrixplot.png"
+#     #     plot.savefig(os.path.join(result_path, filename))
+#     #     plot.show()
+#     return stat_num_real, stat_num_syn, rel_freq_real, rel_freq_syn
 
 
 def steps(real_df: pd.DataFrame, syn_df: pd.DataFrame, subject_idx: str = "subject_id"):
@@ -131,7 +229,28 @@ if __name__ == "__main__":
     syn_file = os.path.join(load_path, f"{syn_model}.csv.gz")
     cols = ["subject_id", "seq_num", "icd_code", "gender", "age", "deceased", "race"]
     real_df = pd.read_csv(real_file, sep=",", compression="gzip", usecols=cols)
-    syn_df = pd.read_csv(syn_file, sep=",", compression="gzip", usecols=cols)
+
+    cpar_df = pd.read_csv(
+        os.path.join(load_path, "cpar.csv.gz"),
+        sep=",",
+        compression="gzip",
+        usecols=cols,
+    )
+    dgan_df = pd.read_csv(
+        os.path.join(load_path, "dgan.csv.gz"),
+        sep=",",
+        compression="gzip",
+        usecols=cols,
+    )
+
+    stats_plot_ = stats_plot(real_df, cpar_df, dgan_df)
+    stats_plot_.savefig(os.path.join(result_path, "descr_stats_box.png"))
+    stats_plot_.show()
+
+    # if syn_model == 'cpar':
+    #     syn_df = cpar_df
+    # else:
+    #     syn_df = dgan_df
 
     # select only k subjects to test code quickly
     # k = 60
@@ -142,14 +261,12 @@ if __name__ == "__main__":
     #     real_df.subject_id.isin(np.random.choice(real_df.subject_id.unique(), k))
     # ]
 
-    descriptive_statistics(real_df, syn_df, result_path)
+    # steps_plot = steps(real_df, syn_df)
+    # filename = "step_plot.png"
+    # steps_plot.savefig(os.path.join(result_path, filename))
+    # steps_plot.show()
 
-    steps_plot = steps(real_df, syn_df)
-    filename = "step_plot.png"
-    steps_plot.savefig(os.path.join(result_path, filename))
-    steps_plot.show()
-
-    tsne_plot_ = tsne_plot(real_df, syn_df, result_path)
-    filename = "tsne.png"
-    tsne_plot_.savefig(os.path.join(result_path, filename))
-    tsne_plot_.show()
+    # tsne_plot_ = tsne_plot(real_df, syn_df, result_path)
+    # filename = "tsne.png"
+    # tsne_plot_.savefig(os.path.join(result_path, filename))
+    # tsne_plot_.show()
