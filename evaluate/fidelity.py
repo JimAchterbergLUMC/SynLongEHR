@@ -8,12 +8,28 @@ import os
 from utils import preprocess, metrics, models
 import pickle
 from matplotlib import pyplot as plt
+import seaborn as sns
 
 
-def stats_plot(real_df, cpar_df, dgan_df):
+def stats_plot(
+    real_df: pd.DataFrame,
+    cpar_df: pd.DataFrame,
+    dgan_df: pd.DataFrame,
+    result_path: str,
+):
+    """
+    Creates plot of descriptive statistics.
+
+    real_df: dataframe of real data.
+    cpar_df: synthetic dataframe from CPAR.
+    dgan_df: synthetic dataframe from DoppelGANger.
+    result_path: path to save results.
+    returns: None, saves plots to results directory.
+
+    """
     barWidth = 0.25
-    stats_real, stats_cpar = descriptive_statistics(real_df, cpar_df)
-    stats_real, stats_dgan = descriptive_statistics(real_df, dgan_df)
+    stats_real, stats_cpar = metrics.descriptive_statistics(real_df, cpar_df)
+    stats_real, stats_dgan = metrics.descriptive_statistics(real_df, dgan_df)
     # boxplots
     plt.figure(figsize=(15, 4))
     box = plt.boxplot(
@@ -51,7 +67,7 @@ def stats_plot(real_df, cpar_df, dgan_df):
         np.arange(start=1, stop=len(stats_cpar)) + 2 * barWidth,
         stats_dgan[1:],
         color="maroon",
-        label="DGAN",
+        label="DoppelGANger",
         width=barWidth,
     )
 
@@ -70,91 +86,26 @@ def stats_plot(real_df, cpar_df, dgan_df):
     ]
     plt.xticks(np.arange(len(vars)), vars, fontsize=11)
     plt.yticks(fontsize=11)
-    return plt
+    plt.savefig(os.path.join(result_path, "descr_stats_box.png"))
+    plt.show()
 
+    freqmatrix_real = metrics.rel_freq_matrix(data=real_df, columns="icd_code")
+    freqmatrix_cpar = metrics.rel_freq_matrix(data=cpar_df, columns="icd_code")
+    freqmatrix_dgan = metrics.rel_freq_matrix(data=dgan_df, columns="icd_code")
 
-def descriptive_statistics(real_df: pd.DataFrame, syn_df: pd.DataFrame):
-    """
-    Creates a list of some basic descriptive statistics, to later be plotted in a Bar plot.
-
-    real_df: real dataframe
-    syn_df: synthetic dataframe
-    returns: list of descriptive statistics
-    """
-
-    # first get static data
-    stat = ["age", "gender", "deceased", "race"]
-    real_df = preprocess.get_static(data=real_df, columns=stat)
-    syn_df = preprocess.get_static(data=syn_df, columns=stat)
-
-    stats_real = []
-    stats_syn = []
-    for df, results in zip([real_df, syn_df], [stats_real, stats_syn]):
-        results.append(df.age.mean() / 100)
-        results.append(df.deceased.mean())
-        results.append(len(df[df.gender == "M"]) / len(df))
-        for race in [
-            "white",
-            "unknown",
-            "black",
-            "hispanic",
-            "asian",
-            "native_american",
-            "multiple",
-        ]:
-            results.append(len(df[df.race == race]) / len(df))
-    return stats_real, stats_syn
-
-
-# def descriptive_statistics(
-#     real_df: pd.DataFrame, syn_df: pd.DataFrame, result_path: str
-# ):
-#     """
-#     Outputs descriptive statistics. Tables for static, heatmaps for dynamic data.
-
-#     real_df: Real longitudinal pandas dataframe.
-#     syn_df: Synthetic longitudinal pandas dataframe.
-#     result_path: Path to which we save results.
-#     returns: None, saves results to result directory.
-#     """
-
-#     static_features = ["age", "gender", "deceased", "race"]
-#     # get static feature dataframes
-#     real_df_static = preprocess.get_static(data=real_df, columns=static_features)
-#     syn_df_static = preprocess.get_static(data=syn_df, columns=static_features)
-
-#     # get descriptive statistics for static numerical variables
-#     stat_num_real = metrics.descr_stats(data=real_df_static[["age"]])
-#     stat_num_syn = metrics.descr_stats(data=syn_df_static[["age"]])
-#     # filename = "descr_stats_staticnumerical.csv"
-#     # pd.concat([stat_num_real, stat_num_syn], axis=1).to_csv(
-#     #     os.path.join(result_path, filename)
-#     # )
-
-#     # #get relative frequencies for static categorical variables
-#     rel_freq_real = metrics.relative_freq(
-#         data=real_df_static[["gender", "deceased", "race"]]
-#     )
-#     rel_freq_syn = metrics.relative_freq(
-#         data=syn_df_static[["gender", "deceased", "race"]]
-#     )
-#     # filename = "descr_stats_staticcategorical.csv"
-#     # pd.concat([rel_freq_real, rel_freq_syn], axis=1).to_csv(
-#     #     os.path.join(result_path, filename)
-#     # )
-
-#     # get matrix of relative frequencies at each step
-#     # freqmatrix_real = metrics.rel_freq_matrix(data=real_df, columns="icd_code")
-#     # freqmatrix_syn = metrics.rel_freq_matrix(data=syn_df, columns="icd_code")
-
-#     # # plot frequencies as a heatmap
-#     # for matrix, name in zip([freqmatrix_real, freqmatrix_syn], ["Real", "Synthetic"]):
-#     #     plot = metrics.freq_matrix_plot(matrix, range=(0, 0.8))
-#     #     plot.title(f"{name} ICD chapter frequencies")
-#     #     filename = f"{name}_matrixplot.png"
-#     #     plot.savefig(os.path.join(result_path, filename))
-#     #     plot.show()
-#     return stat_num_real, stat_num_syn, rel_freq_real, rel_freq_syn
+    # plot frequencies as a heatmap
+    for matrix, name in zip(
+        [freqmatrix_real, freqmatrix_cpar, freqmatrix_dgan],
+        ["Real", "CPAR", "DoppelGANger"],
+    ):
+        plt.figure(figsize=(10, 6))
+        sns.set_theme(font_scale=1.1)
+        sns.heatmap(matrix, annot=False, cmap="rocket_r", fmt=".2f", vmin=0, vmax=0.8)
+        plt.xlabel("Step", fontsize=11)
+        plt.ylabel("Category", fontsize=11)
+        plt.title(f"{name} ICD chapter frequencies", fontsize=11)
+        plt.savefig(os.path.join(result_path, f"{name}_matrixplot.png"))
+        plt.show()
 
 
 def steps(real_df: pd.DataFrame, syn_df: pd.DataFrame, subject_idx: str = "subject_id"):
@@ -169,22 +120,39 @@ def steps(real_df: pd.DataFrame, syn_df: pd.DataFrame, subject_idx: str = "subje
 
     r_steps = real_df.groupby(subject_idx).seq_num.max()
     s_steps = syn_df.groupby(subject_idx).seq_num.max()
-    steps_plot = metrics.plot_max_steps(r_steps, s_steps)
-    steps_plot.title("Maximum #steps per sample")
-    return steps_plot
+    _, bins, _ = plt.hist(
+        s_steps, bins="auto", color="red", label="Synthetic", alpha=0.5
+    )
+    plt.hist(r_steps, bins=bins, color="blue", label="Real", alpha=0.5)
+    plt.xlabel("Max steps")
+    plt.ylabel("Frequency")
+    plt.legend()
+    plt.title("Maximum #steps per sample")
+    return plt
 
 
 # executes the tsne step
-def tsne_plot(real_df: pd.DataFrame, syn_df: pd.DataFrame, result_path: str):
+def embedding_plot(
+    real_df: pd.DataFrame,
+    syn_df: pd.DataFrame,
+    emb_type: str = "tsne",
+    n_neighbours: int = 25,
+    save_distance: bool = False,
+    result_path: str = "",
+):
     """
-    Generates tSNE embeddings and creates a plot.
+    Generates embeddings from tSNE or UMAP and creates a plot.
 
     real_df: Real longitudinal pandas dataframe.
     syn_df: Synthetic longitudinal pandas dataframe.
+    emb_type: tsne or umap embeddings.
+    n_neighbours: number of neighbours used in embedding algorithm (perplexity for tSNE)
+    save_distance: whether to save distance matrix to result directory. May help if we want to precompute distances and try different parameters for the embedding algorithm.
     result_path: Path to which we save (intermediary) results.
-    returns: tSNE plot.
+    returns: embedding plot.
 
     """
+    assert emb_type in ["tsne", "umap"]
 
     # split data into static and dynamic
     df = pd.concat([real_df, syn_df], axis=0)
@@ -199,22 +167,39 @@ def tsne_plot(real_df: pd.DataFrame, syn_df: pd.DataFrame, result_path: str):
     )
     dynamic_distances = models.dyn_gower_matrix(seq)
 
-    # # take weighted sum of static and timevarying distances
-    distance_matrix = ((len(static.columns)) / len(df.columns)) * static_distances + (
-        seq.shape[2] / len(df.columns)
-    ) * dynamic_distances
-    filename = "distance_matrix.pkl"
-    with open(os.path.join(result_path, filename), "wb") as f:
-        pickle.dump(distance_matrix, f)
+    col_len = static.shape[1] + seq.shape[2]
 
-    # #compute and plot tsne projections with synthetic/real labels as colors
+    # # take weighted sum of static and timevarying distances
+    distance_matrix = ((len(static.columns)) / col_len) * static_distances + (
+        seq.shape[2] / col_len
+    ) * dynamic_distances
+    if save_distance:
+        filename = "distance_matrix.pkl"
+        with open(os.path.join(result_path, filename), "wb") as f:
+            pickle.dump(distance_matrix, f)
+
+    # #compute and plot projections with synthetic/real labels as colors
     labels = np.concatenate(
         (np.zeros(real_df.subject_id.nunique()), np.ones(syn_df.subject_id.nunique())),
         axis=0,
     )
-    tsne_plot = models.tsne(distance_matrix, labels)
-    # tsne_plot.title('tSNE plot of synthetic/real samples')
-    return tsne_plot
+
+    if emb_type == "tsne":
+        embeddings = models.tsne(distance_matrix, n_neighbours)
+    else:
+        embeddings = models.umap(distance_matrix, n_neighbours)
+    plt.scatter(embeddings[:, 0], embeddings[:, 1], c=labels, cmap="bwr", alpha=0.1)
+    handles = [
+        plt.Line2D(
+            [0], [0], marker="o", color="w", markerfacecolor="blue", label="Real"
+        ),
+        plt.Line2D(
+            [0], [0], marker="o", color="w", markerfacecolor="red", label="Synthetic"
+        ),
+    ]
+    plt.legend(handles=handles, fontsize=11, loc="upper right")
+    plt.title(f"{emb_type} plot ({n_neighbours} neighbours)", fontsize=11)
+    return plt
 
 
 if __name__ == "__main__":
@@ -236,6 +221,7 @@ if __name__ == "__main__":
         compression="gzip",
         usecols=cols,
     )
+
     dgan_df = pd.read_csv(
         os.path.join(load_path, "dgan.csv.gz"),
         sep=",",
@@ -243,30 +229,29 @@ if __name__ == "__main__":
         usecols=cols,
     )
 
-    stats_plot_ = stats_plot(real_df, cpar_df, dgan_df)
-    stats_plot_.savefig(os.path.join(result_path, "descr_stats_box.png"))
-    stats_plot_.show()
+    stats_plot(real_df, cpar_df, dgan_df, result_path)
 
-    # if syn_model == 'cpar':
-    #     syn_df = cpar_df
-    # else:
-    #     syn_df = dgan_df
+    if syn_model == "cpar":
+        syn_df = cpar_df
+    else:
+        syn_df = dgan_df
+
+    steps_plot = steps(real_df, syn_df)
+    filename = "step_plot.png"
+    steps_plot.savefig(os.path.join(result_path, filename))
+    steps_plot.show()
 
     # select only k subjects to test code quickly
-    # k = 60
-    # syn_df = syn_df[
-    #     syn_df.subject_id.isin(np.random.choice(syn_df.subject_id.unique(), k))
-    # ]
-    # real_df = real_df[
-    #     real_df.subject_id.isin(np.random.choice(real_df.subject_id.unique(), k))
-    # ]
+    k = 60
+    syn_df = syn_df[
+        syn_df.subject_id.isin(np.random.choice(syn_df.subject_id.unique(), k))
+    ]
+    real_df = real_df[
+        real_df.subject_id.isin(np.random.choice(real_df.subject_id.unique(), k))
+    ]
 
-    # steps_plot = steps(real_df, syn_df)
-    # filename = "step_plot.png"
-    # steps_plot.savefig(os.path.join(result_path, filename))
-    # steps_plot.show()
-
-    # tsne_plot_ = tsne_plot(real_df, syn_df, result_path)
-    # filename = "tsne.png"
-    # tsne_plot_.savefig(os.path.join(result_path, filename))
-    # tsne_plot_.show()
+    emb_type = "umap"
+    emb_plot = embedding_plot(real_df, syn_df, n_neighbours=25, emb_type=emb_type)
+    filename = f"{emb_type} plot.png"
+    emb_plot.savefig(os.path.join(result_path, filename))
+    emb_plot.show()

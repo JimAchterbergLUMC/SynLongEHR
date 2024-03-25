@@ -2,11 +2,11 @@ import keras
 from keras import layers
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from matplotlib import pyplot as plt
 from sklearn.manifold import TSNE
 from gower import gower_matrix
 from dtwParallel import dtw_functions
 from scipy.spatial import distance
+import umap as UMAP
 
 
 # base RNN without output layer
@@ -117,22 +117,26 @@ class mortality_RF(RandomForestClassifier):
 
 
 # tSNE projection plot, color coded by label
-def tsne(distance_matrix, labels):
+def tsne(distance_matrix, n_neighbours):
     embeddings = TSNE(
-        n_components=2, init="random", metric="precomputed"
+        n_components=2,
+        init="random",
+        metric="precomputed",
+        verbose=10,
+        perplexity=n_neighbours,
     ).fit_transform(distance_matrix)
-    plt.figure(figsize=(10, 6))
-    plt.scatter(embeddings[:, 0], embeddings[:, 1], c=labels, cmap="bwr", alpha=0.5)
-    handles = [
-        plt.Line2D(
-            [0], [0], marker="o", color="w", markerfacecolor="blue", label="Real"
-        ),
-        plt.Line2D(
-            [0], [0], marker="o", color="w", markerfacecolor="red", label="Synthetic"
-        ),
-    ]
-    plt.legend(handles=handles)
-    return plt
+
+    return embeddings
+
+
+def umap(distance_matrix, n_neighbours):
+    embeddings = UMAP.UMAP(
+        n_components=2,
+        n_neighbors=n_neighbours,
+        metric="precomputed",
+        verbose=10,
+    ).fit_transform(distance_matrix)
+    return embeddings
 
 
 # get gower matrix for 2d data

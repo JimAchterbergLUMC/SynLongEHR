@@ -5,3 +5,4 @@ tensorflow==2.8.0
 dtwParallel<=0.9.40
 scikit-learn==1.4.0
 protobuf==3.20.0
+umap-learn==0.5.5

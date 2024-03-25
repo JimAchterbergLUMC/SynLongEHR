@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 import pandas as pd
 from scipy.stats import ks_2samp
+from utils import preprocess
 
 
 def mape(true, pred):
@@ -32,24 +33,6 @@ def ks_test(real_pred, syn_pred):
     )
 
 
-def descr_stats(data):
-    stats = ["mean", "std", "min", "max"]
-    list_ = []
-    list_.append(data.mean(axis=0))
-    list_.append(data.std(axis=0))
-    list_.append(data.min(axis=0))
-    list_.append(data.max(axis=0))
-    return pd.DataFrame(list_, index=stats, columns=data.columns)
-
-
-def relative_freq(data):
-    proportions = pd.concat(
-        [data[col].value_counts(normalize=True) for col in data], axis=1
-    )
-    proportions.columns = data.columns
-    return proportions
-
-
 def rel_freq_matrix(data, columns, timestep_idx="seq_num"):
     rel_freq = (
         data.groupby(timestep_idx)[columns]
@@ -59,18 +42,6 @@ def rel_freq_matrix(data, columns, timestep_idx="seq_num"):
     )
     rel_freq = rel_freq.pivot(index=columns, columns=timestep_idx, values="rel_freq")
     return rel_freq
-
-
-def freq_matrix_plot(rel_freq, range=None):
-    if range != None:
-        vmin, vmax = range
-    else:
-        vmin = vmax = None
-    plt.figure(figsize=(10, 6))
-    sns.heatmap(rel_freq, annot=False, cmap="rocket_r", fmt=".2f", vmin=vmin, vmax=vmax)
-    plt.xlabel("Step")
-    plt.ylabel("Category")
-    return plt
 
 
 def GoF_kdeplot(pred, y_test):
@@ -94,18 +65,40 @@ def GoF_kdeplot(pred, y_test):
         fill=True,
         label="Synthetic",
     )
-    plt.xlabel("Classification score")
-    plt.ylabel("Density")
-    plt.legend()
+    plt.xlabel("Classification score", fontsize=11)
+    plt.ylabel("Density", fontsize=11)
+    plt.legend(fontsize=11)
     return plt
 
 
-def plot_max_steps(r_tsteps, s_tsteps):
-    _, bins, _ = plt.hist(
-        s_tsteps, bins="auto", color="red", label="Synthetic", alpha=0.5
-    )
-    plt.hist(r_tsteps, bins=bins, color="blue", label="Real", alpha=0.5)
-    plt.xlabel("Max steps")
-    plt.ylabel("Frequency")
-    plt.legend()
-    return plt
+def descriptive_statistics(real_df: pd.DataFrame, syn_df: pd.DataFrame):
+    """
+    Creates a list of some basic descriptive statistics, to later be plotted in a Bar plot.
+
+    real_df: real dataframe
+    syn_df: synthetic dataframe
+    returns: list of descriptive statistics
+    """
+
+    # first get static data
+    stat = ["age", "gender", "deceased", "race"]
+    real_df = preprocess.get_static(data=real_df, columns=stat)
+    syn_df = preprocess.get_static(data=syn_df, columns=stat)
+
+    stats_real = []
+    stats_syn = []
+    for df, results in zip([real_df, syn_df], [stats_real, stats_syn]):
+        results.append(df.age.mean() / 100)
+        results.append(df.deceased.mean())
+        results.append(len(df[df.gender == "M"]) / len(df))
+        for race in [
+            "white",
+            "unknown",
+            "black",
+            "hispanic",
+            "asian",
+            "native_american",
+            "multiple",
+        ]:
+            results.append(len(df[df.race == race]) / len(df))
+    return stats_real, stats_syn

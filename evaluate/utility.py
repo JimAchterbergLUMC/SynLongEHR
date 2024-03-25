@@ -77,7 +77,6 @@ def GoF(data: list, hparams: dict, model_path: str):
     accuracy = metrics.accuracy(y_test, np.round(pred))
     # kde plot of classifier scores
     GoF_kdeplot = metrics.GoF_kdeplot(pred=pred, y_test=y_test)
-    GoF_kdeplot.title("Distribution of classification scores")
 
     return accuracy, pval, GoF_kdeplot
 
@@ -434,13 +433,13 @@ if __name__ == "__main__":
     )
 
     # select only part of data for quick code testing
-    # n = 60
-    # real_df = real_df[
-    #     real_df.subject_id.isin(np.random.choice(real_df.subject_id.unique(), size=n))
-    # ]
-    # syn_df = syn_df[
-    #     syn_df.subject_id.isin(np.random.choice(syn_df.subject_id.unique(), size=n))
-    # ]
+    n = 60
+    real_df = real_df[
+        real_df.subject_id.isin(np.random.choice(real_df.subject_id.unique(), size=n))
+    ]
+    syn_df = syn_df[
+        syn_df.subject_id.isin(np.random.choice(syn_df.subject_id.unique(), size=n))
+    ]
 
     # ------------------------------------------------------------------------------------------------------
     # preprocess data to list of static (pandas dataframe) and sequential (padded 3D numpy array) data
@@ -501,8 +500,11 @@ if __name__ == "__main__":
         # save plot only at even numbers
         if (s % 2) == 0:
             filename = f"gof_plot_{s}.png"
+            plot.title(
+                f"{syn_model}: Distribution of classification scores", fontsize=11
+            )
             plot.savefig(os.path.join(result_path, filename))
-            plot.clf()
+            plot.show()
 
         # #------------------------------------------------------------------------------------------
         # mortality

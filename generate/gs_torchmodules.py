@@ -1,6 +1,6 @@
 # replace discriminator and add masking layer in Gretel Synthetics torch_modules.py
 # includes masking in the discriminator to allow variable sequence lengths
-# DONT FORGET TO IMPLEMENT MASKING PARAMETERS IN THE DGAN.PY SCRIPT
+# DONT FORGET TO IMPLEMENT MASKING PARAMETERS IN THE DGAN.PY SCRIPT IN DOPPELGANGER PACKAGE
 
 import torch
 
